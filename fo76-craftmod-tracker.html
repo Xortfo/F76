@@ -550,77 +550,91 @@
             character.learned = packSets(learnedSets);
             character.scrap = packSets(scrapSets);
         }
+// --- ADD THESE VARIABLES AT THE TOP OF YOUR SCRIPT ---
+// WARNING: Only hardcode these if you are running the HTML file locally!
+const GITHUB_TOKEN = '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'; 
+const GIST_ID = 'd05fcde71a47869a29883416cad24346';
 
-        function persistStore() {
-            writeMemoryToActiveCharacter();
-            const payload = {
-                version: 3,
-                activeId: activeCharacterId,
-                characters: characters
-            };
-            localStorage.setItem('fo76_craftmods_v3', JSON.stringify(payload));
+// --- REPLACE THE EXISTING persistStore() FUNCTION ---
+async function persistStore() {
+    writeMemoryToActiveCharacter();
+    const payload = {
+        version: 3,
+        activeId: activeCharacterId,
+        characters: characters
+    };
 
-            const active = getActiveCharacter();
-            if (active) {
-                localStorage.setItem('fo76_craftmods_v2', JSON.stringify({
-                    learned: active.learned,
-                    scrap: active.scrap
-                }));
-                localStorage.setItem('fo76_craftmods_v1', JSON.stringify(active.learned));
-            }
-        }
+    // Keep the local fallback just in case
+    localStorage.setItem('fo76_craftmods_v3', JSON.stringify(payload)); 
 
-        function saveState() {
-            persistStore();
-        }
-
-        function loadState() {
-            const savedV3 = localStorage.getItem('fo76_craftmods_v3');
-            if (savedV3) {
-                try {
-                    const parsed = JSON.parse(savedV3);
-                    if (parsed && Array.isArray(parsed.characters) && parsed.characters.length) {
-                        characters = parsed.characters.map(c => ({
-                            id: c.id || newCharacterId(),
-                            name: (c.name || 'Character').slice(0, 32),
-                            learned: c.learned || emptyPackedStars(),
-                            scrap: c.scrap || emptyPackedStars()
-                        }));
-                        activeCharacterId = parsed.activeId && characters.some(c => c.id === parsed.activeId)
-                            ? parsed.activeId
-                            : characters[0].id;
-                        applyCharacterToMemory(getActiveCharacter());
-                        return;
+    // Save to GitHub Gist
+    try {
+        await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${GITHUB_TOKEN}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                files: {
+                    'tracker-data.json': {
+                        content: JSON.stringify(payload)
                     }
-                } catch (e) {}
-            }
-
-            let learned = emptyPackedStars();
-            let scrap = emptyPackedStars();
-            const savedV2 = localStorage.getItem('fo76_craftmods_v2');
-            if (savedV2) {
-                try {
-                    const parsed = JSON.parse(savedV2);
-                    learned = parsed.learned || emptyPackedStars();
-                    scrap = parsed.scrap || emptyPackedStars();
-                } catch (e) {}
-            } else {
-                const savedV1 = localStorage.getItem('fo76_craftmods_v1');
-                if (savedV1) {
-                    try {
-                        const parsed = JSON.parse(savedV1);
-                        learned = parsed;
-                    } catch (e) {}
                 }
+            })
+        });
+        console.log("Successfully saved to GitHub!");
+    } catch (error) {
+        console.error("Failed to save to GitHub:", error);
+    }
+}
+
+// --- REPLACE THE EXISTING loadState() FUNCTION ---
+async function loadState() {
+    let cloudData = null;
+    
+    // Fetch from GitHub Gist
+    try {
+        const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+            headers: {
+                'Authorization': `Bearer ${GITHUB_TOKEN}`,
+                'Accept': 'application/vnd.github.v3+json'
             }
-
-            const main = createCharacterRecord('Main', learned, scrap);
-            characters = [main];
-            activeCharacterId = main.id;
-            applyCharacterToMemory(main);
-            persistStore();
+        });
+        
+        if (response.ok) {
+            const gist = await response.json();
+            const fileContent = gist.files['tracker-data.json'].content;
+            cloudData = JSON.parse(fileContent);
         }
+    } catch (error) {
+        console.error("Failed to load from GitHub, falling back to local:", error);
+    }
 
+    // Try to use Cloud Data, then v3 Local Data, then default
+    const savedData = cloudData || JSON.parse(localStorage.getItem('fo76_craftmods_v3') || 'null');
+
+    if (savedData && Array.isArray(savedData.characters) && savedData.characters.length) {
+        characters = savedData.characters.map(c => ({
+            id: c.id || newCharacterId(),
+            name: (c.name || 'Character').slice(0, 32),
+            learned: c.learned || emptyPackedStars(),
+            scrap: c.scrap || emptyPackedStars()
+        }));
+        activeCharacterId = savedData.activeId && characters.some(c => c.id === savedData.activeId)
+            ? savedData.activeId
+            : characters[0].id;
+        applyCharacterToMemory(getActiveCharacter());
+        return;
+    }
+
+    // Default blank state if nothing exists
+    const main = createCharacterRecord('Main', emptyPackedStars(), emptyPackedStars());
+    characters = [main];
+    activeCharacterId = main.id;
+    applyCharacterToMemory(main);
+}
         function nextDefaultName() {
             const used = new Set(characters.map(c => c.name.toLowerCase()));
             if (!used.has('main')) return 'Main';
