@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fallout 76 • Craft Mod Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Confetti library -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap');
+        
+        :root {
+            --accent-green: #22c55e;
+        }
+        
+        body {
+            font-family: 'Inter', system_ui, sans-serif;
+        }
+        
+        .title-font {
+            font-family: 'Space Grotesk', 'Inter', sans-serif;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+
+        .mod-row {
+            transition: all 0.1s ease;
+            min-height: 30px;
+        }
+        
+        .mod-row:hover {
+            background-color: #27251f;
+        }
+        
+        .mod-row.learned {
+            background-color: #052e16;
+        }
+        
+        .mod-row.learned .mod-name {
+            color: #4ade80;
+        }
+
+        .mod-row input[type="checkbox"] {
+            accent-color: #22c55e;
+        }
+
+        .mod-row input.cb-learned { accent-color: #22c55e; }
+        .mod-row input.cb-scrap { accent-color: #ef4444; }
+
+        .check-cluster {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .w-tag, .a-tag, .ra-tag, .pa-tag, .rw-tag, .mw-tag {
+            width: 13px;
+            height: 13px;
+            color: white;
+            font-size: 8px;
+            font-weight: 900;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 2px;
+            flex-shrink: 0;
+            line-height: 1;
+            margin-left: 3px;
+        }
+
+        .w-tag  { background-color: #ec4899; }   /* General Weapon */
+        .a-tag  { background-color: #22d3ee; }   /* Armor */
+        .ra-tag { background-color: #f97316; }   /* Regular Armor */
+        .pa-tag { background-color: #ef4444; }   /* Power Armor */
+        .rw-tag { background-color: #c026d3; }   /* Ranged Weapon */
+        .mw-tag { background-color: #000000; border: 1px solid #444; }   /* Melee Weapon - Pure Black */
+
+        .column-header {
+            transition: all 0.2s ease;
+        }
+
+        .star-col {
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);
+        }
+
+        .section-title {
+            font-size: 13px;
+            letter-spacing: 0.5px;
+        }
+
+        .learned-pill {
+            font-size: 9.5px;
+            letter-spacing: 0.5px;
+        }
+
+        .progress-bar {
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .fo76-dark {
+            background-color: #0f0e0a;
+        }
+
+        .char-menu {
+            min-width: 240px;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .char-menu-item.active {
+            background-color: #14532d;
+        }
+
+        .modal-backdrop {
+            background: rgba(0, 0, 0, 0.72);
+        }
+    </style>
+</head>
+<body class="bg-[#0f0e0a] text-zinc-200 fo76-dark">
+    <div class="max-w-[1700px] mx-auto p-4">
+        <!-- Header -->
+        <div class="flex items-end justify-between mb-4 gap-4">
+            <div class="flex items-center gap-x-4 min-w-0">
+                <div class="flex items-center gap-x-3">
+                    <div class="w-9 h-9 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-2xl flex items-center justify-center shadow-inner">
+                        <i class="fa-solid fa-atom text-white text-2xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="title-font text-3xl font-semibold tracking-tighter">FALLOUT 76</h1>
+                        <p class="text-emerald-400 text-sm -mt-1 font-medium">CRAFT MOD TRACKER</p>
+                    </div>
+                </div>
+
+                <div class="relative" id="character-picker">
+                    <div class="flex items-center gap-2">
+                        <button id="character-btn" type="button"
+                                class="flex items-center gap-x-2 px-3.5 py-2 text-sm font-medium bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-emerald-700 transition-all rounded-3xl text-zinc-200">
+                            <i class="fa-solid fa-user text-emerald-400 text-xs"></i>
+                            <span id="character-label" class="max-w-[140px] truncate">Main</span>
+                            <i class="fa-solid fa-chevron-down text-[10px] text-zinc-500"></i>
+                        </button>
+                        <button id="add-character-btn" type="button" title="Create new character"
+                                class="w-9 h-9 flex items-center justify-center bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-emerald-700 transition-all rounded-full text-emerald-400">
+                            <i class="fa-solid fa-plus text-xs"></i>
+                        </button>
+                    </div>
+                    <div id="character-menu" class="char-menu hidden absolute left-0 top-[calc(100%+8px)] z-30 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl p-1.5">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-x-3">
+                <div class="relative w-72">
+                    <i class="fa-solid fa-search absolute left-3.5 top-2.5 text-zinc-500"></i>
+                    <input id="search-input" type="text" placeholder="Search mods..." 
+                           class="w-full bg-zinc-900 border border-zinc-700 focus:border-emerald-600 transition-colors pl-10 pr-4 py-2 text-sm rounded-3xl outline-none placeholder:text-zinc-500">
+                </div>
+                
+                <button id="reset-btn"
+                        class="flex items-center gap-x-2 px-4 py-2 text-sm font-medium bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-zinc-600 transition-all rounded-3xl text-zinc-300 hover:text-white">
+                    <i class="fa-solid fa-undo text-xs"></i>
+                    <span>Reset All</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats bar -->
+        <div class="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-3xl px-5 py-2 mb-4">
+            <div class="flex items-center gap-x-8 text-sm">
+                <div>
+                    <span class="text-zinc-400">Total Mods</span>
+                    <span id="total-count" class="ml-2 font-mono text-xl font-semibold text-white">148</span>
+                </div>
+                <div class="h-3 w-px bg-zinc-700"></div>
+                <div>
+                    <span class="text-zinc-400">Learned</span>
+                    <span id="total-learned" class="ml-2 font-mono text-xl font-semibold text-emerald-400">0</span>
+                </div>
+                <div class="h-3 w-px bg-zinc-700"></div>
+                <div class="flex items-center gap-x-2">
+                    <div class="text-emerald-400">
+                        <i class="fa-solid fa-check-double"></i>
+                    </div>
+                    <span id="total-percent" class="font-mono text-lg font-semibold">0%</span>
+                </div>
+            </div>
+
+            <!-- Category Breakdown -->
+            <div id="category-breakdown" class="flex items-center gap-x-5 text-xs font-mono"></div>
+            
+            <div class="text-xs px-3 py-1 bg-zinc-800 rounded-2xl text-zinc-400 flex items-center gap-x-1.5">
+                <i class="fa-solid fa-info-circle"></i>
+                <span>Data saved automatically in your browser (localStorage)</span>
+            </div>
+        </div>
+
+        <!-- Rusty Pick Recommendation -->
+        <div class="mb-4 bg-zinc-900 border border-amber-600/40 rounded-3xl px-5 py-3.5 flex items-center gap-x-4 shadow-inner">
+            <div class="flex items-center gap-x-3 flex-1 min-w-0">
+                <div class="w-9 h-9 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-2xl flex-shrink-0 flex items-center justify-center shadow-inner">
+                    <i class="fa-solid fa-store text-white text-xl"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-x-2">
+                        <span class="text-amber-400 text-[10px] font-bold tracking-[1.5px] uppercase">Rusty Pick Priority</span>
+                    </div>
+                    <div id="rusty-rec-text" class="text-xl font-semibold tracking-tight text-white leading-none mt-0.5">
+                        Calculating...
+                    </div>
+                    <div class="text-[10px] text-zinc-500 mt-1">Updates as you learn</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Four Columns -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <!-- 1ST STAR -->
+            <div class="star-col bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden flex flex-col">
+                <div class="column-header px-4 pt-3 pb-2.5 bg-zinc-800 border-b border-zinc-700">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-x-2.5">
+                            <div class="flex text-xl text-slate-300">
+                                <i class="fa-solid fa-star"></i>
+                                <i class="fa-regular fa-star opacity-40"></i>
+                                <i class="fa-regular fa-star opacity-40"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold text-xl tracking-tight">1ST STAR</div>
+                                <div class="section-title text-[10px] text-slate-400 -mt-0.5">LEGENDARY CRAFT MODS</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div id="count-1" class="font-mono text-2xl font-semibold text-slate-200 tabular-nums">0/39</div>
+                            <div class="mt-1.5 w-[92px]">
+                                <div class="h-[5px] bg-zinc-700 rounded-full overflow-hidden">
+                                    <div id="progress-1" class="progress-bar h-full bg-slate-400 rounded-full" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="list-1" class="mod-list flex-1 p-1 space-y-px bg-zinc-900"></div>
+            </div>
+
+            <!-- 2ND STAR -->
+            <div class="star-col bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden flex flex-col">
+                <div class="column-header px-4 pt-3 pb-2.5 bg-zinc-800 border-b border-zinc-700">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-x-2.5">
+                            <div class="flex text-xl text-blue-400">
+                                <i class="fa-solid fa-star"></i>
+                                <i class="fa-solid fa-star"></i>
+                                <i class="fa-regular fa-star opacity-40"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold text-xl tracking-tight">2ND STAR</div>
+                                <div class="section-title text-[10px] text-blue-300/70 -mt-0.5">LEGENDARY CRAFT MODS</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div id="count-2" class="font-mono text-2xl font-semibold text-blue-200 tabular-nums">0/32</div>
+                            <div class="mt-1.5 w-[92px]">
+                                <div class="h-[5px] bg-zinc-700 rounded-full overflow-hidden">
+                                    <div id="progress-2" class="progress-bar h-full bg-blue-500 rounded-full" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="list-2" class="mod-list flex-1 p-1 space-y-px bg-zinc-900"></div>
+            </div>
+
+            <!-- 3RD STAR -->
+            <div class="star-col bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden flex flex-col">
+                <div class="column-header px-4 pt-3 pb-2.5 bg-zinc-800 border-b border-zinc-700">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-x-2.5">
+                            <div class="flex text-xl text-yellow-400">
+                                <i class="fa-solid fa-star"></i>
+                                <i class="fa-solid fa-star"></i>
+                                <i class="fa-solid fa-star"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold text-xl tracking-tight">3RD STAR</div>
+                                <div class="section-title text-[10px] text-yellow-300/70 -mt-0.5">LEGENDARY CRAFT MODS</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div id="count-3" class="font-mono text-2xl font-semibold text-yellow-200 tabular-nums">0/40</div>
+                            <div class="mt-1.5 w-[92px]">
+                                <div class="h-[5px] bg-zinc-700 rounded-full overflow-hidden">
+                                    <div id="progress-3" class="progress-bar h-full bg-yellow-500 rounded-full" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="list-3" class="mod-list flex-1 p-1 space-y-px bg-zinc-900"></div>
+            </div>
+
+            <!-- 4TH STAR -->
+            <div class="star-col bg-zinc-900 border border-zinc-700 rounded-3xl overflow-hidden flex flex-col">
+                <div class="column-header px-4 pt-3 pb-2.5 bg-zinc-800 border-b border-zinc-700">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-x-2.5">
+                            <div class="flex text-xl text-red-400">
+                                <i class="fa-solid fa-star"></i>
+                                <i class="fa-solid fa-star"></i>
+                                <i class="fa-solid fa-star"></i>
+                                <i class="fa-solid fa-star"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold text-xl tracking-tight">4TH STAR</div>
+                                <div class="section-title text-[10px] text-red-300/70 -mt-0.5">LEGENDARY CRAFT MODS</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div id="count-4" class="font-mono text-2xl font-semibold text-red-200 tabular-nums">0/37</div>
+                            <div class="mt-1.5 w-[92px]">
+                                <div class="h-[5px] bg-zinc-700 rounded-full overflow-hidden">
+                                    <div id="progress-4" class="progress-bar h-full bg-red-500 rounded-full" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="list-4" class="mod-list flex-1 p-1 space-y-px bg-zinc-900"></div>
+            </div>
+        </div>
+        
+        <div class="mt-3 text-center">
+            <p class="text-[10px] text-zinc-500">Discord: iamwezo • Data saved locally per character</p>
+        </div>
+    </div>
+
+    <div id="char-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="w-full max-w-sm bg-zinc-900 border border-zinc-700 rounded-3xl p-5 shadow-2xl">
+            <h2 id="char-modal-title" class="title-font text-xl text-white mb-3">New Character</h2>
+            <p id="char-modal-desc" class="text-sm text-zinc-400 mb-3">Each character has its own learned and scrap marks.</p>
+            <input id="char-modal-input" type="text" maxlength="32" placeholder="Character name"
+                   class="w-full bg-zinc-950 border border-zinc-700 focus:border-emerald-600 transition-colors px-4 py-2.5 text-sm rounded-2xl outline-none placeholder:text-zinc-500 mb-4">
+            <div class="flex justify-end gap-2">
+                <button id="char-modal-cancel" type="button"
+                        class="px-4 py-2 text-sm rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300">Cancel</button>
+                <button id="char-modal-confirm" type="button"
+                        class="px-4 py-2 text-sm rounded-2xl bg-emerald-700 hover:bg-emerald-600 text-white font-medium">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function initTailwind() {
+            document.documentElement.style.setProperty('--accent-green', '#22c55e');
+        }
+
+        // Weapon Mods (Pink W)
+        const weaponMods = new Set([
+            "Adrenal", "Anti-armor", "Aristocrat's", "Assassin's", "Berserker's", "Bloodied", 
+            "Executioner's", "Exterminator's", "Feral's", "Furious", "Ghoul Slayer's", 
+            "Gourmand's", "Hunter's", "Instigating", "Juggernaut's", "Junkie's", "Lucid", 
+            "Medic's", "Mutant Slayer's", "Mutant's", "Nocturnal", "Quad", "Sniper's", 
+            "Stalker's", "Suppressor's", "Troubleshooter's", "Two Shot", "Vampire's", "Zealot's",
+            "Basher's", "Crippling", "Explosive", "Heavy Hitter's", "Hitman's", "Inertial", 
+            "Last Shot", "Pick Pocketer's", "Rapid", "Riposting", "Steady", "V.A.T.S. Enhanced", "Vital",
+            "Agility (3★)", "Barbarian", "Blocker", "Charisma (3★)", "Defender's", "Durability", 
+            "Endurance (3★)", "Ghost's", "Glowing", "Intelligence (3★)", "Lightweight", 
+            "Luck (3★)", "Lucky Hit", "Nimble", "Perception (3★)", "Strength (3★)", "Swift", 
+            "V.A.T.S. Optimized",
+            "Bully's", "Charged", "Combo-Breaker's", "Conductor's", "Electrician's", "Encircler's", 
+            "Fencer's", "Fracturer's", "Icemen's", "Pin-Pointer's", "Polished", "Pounder's", 
+            "Pyromaniac's", "Satiated", "Stabilizer's", "Tarnished", "Thrill-Seeker's", "Viper's"
+        ]);
+
+        // Armor Mods (Cyan A)
+        const armorMods = new Set([
+            "Adrenal", "Aristocrat's", "Assassin's", "Auto Stim", "Bolstering", "Chameleon", 
+            "Cloaking", "Exterminator's", "Ghoul Slayer's", "Heavyweight", "Hunter's", 
+            "Life Saving", "Lucid", "Mutant Slayer's", "Mutant's", "Nocturnal", "Overeater's", 
+            "Regenerating", "Troubleshooter's", "Unyielding", "Vanguard's", "Zealot's",
+            "Agility", "Antiseptic", "Charisma", "Elementalist", "Endurance", "Fierce", 
+            "Fireproof", "Glutton", "Hardy", "HazMat", "Intelligence", "Luck", "Pain Killer", 
+            "Perception", "Poisoner's", "Powered", "Rushing", "Strength", "Warming",
+            "Acrobat's", "Active", "Adamantium", "Arms Keeper's", "Belted", "Burning", 
+            "Cavalier's", "Defender's", "Dissipating", "Diver's", "Doctor's", "Durability", 
+            "Electrified", "Frozen", "Healthy", "Pack Rat's", "Reflex", "Resilient", 
+            "Safecracker's", "Secret Agent's", "Sentinel's", "Steadfast", "Thru-hiker's", "Toxic",
+            "Aegis", "Battle-Loader's", "Bruiser's", "Choo-Choo's", "Hauler's", 
+            "Limit-Breaking", "Miasma's", "Propelling", "Radioactive-Powered", "Raging", 
+            "Ranger's", "Reflective", "Rejuvenator's", "Runner's", "Sawbones", "Scanner's", 
+            "Stalwart's", "Tanky's", "Vector"
+        ]);
+
+        // Regular Armor (Orange RA)
+        const regularArmorMods = new Set([
+            "Adrenal", "Aristocrat's", "Assassin's", "Auto Stim", "Bolstering", "Chameleon", 
+            "Cloaking", "Exterminator's", "Ghoul Slayer's", "Heavyweight", "Hunter's", 
+            "Life Saving", "Lucid", "Mutant Slayer's", "Mutant's", "Nocturnal", "Overeater's", 
+            "Regenerating", "Troubleshooter's", "Unyielding", "Vanguard's", "Zealot's",
+            "Agility", "Antiseptic", "Charisma", "Elementalist", "Endurance", "Fierce", 
+            "Fireproof", "Glutton", "Hardy", "HazMat", "Intelligence", "Luck", "Pain Killer", 
+            "Perception", "Poisoner's", "Powered", "Rushing", "Strength", "Warming",
+            "Acrobat's", "Active", "Adamantium", "Arms Keeper's", "Belted", "Burning", 
+            "Cavalier's", "Defender's", "Dissipating", "Diver's", "Doctor's", "Durability", 
+            "Electrified", "Frozen", "Healthy", "Pack Rat's", "Reflex", "Resilient", 
+            "Safecracker's", "Secret Agent's", "Sentinel's", "Steadfast", "Thru-hiker's", "Toxic",
+            "Battle-Loader's", "Bruiser's", "Hauler's", "Limit-Breaking", "Miasma's", 
+            "Raging", "Ranger's", "Runner's", "Sawbones", "Tanky's", "Vector"
+        ]);
+
+        // Power Armor (Red PA)
+        const powerArmorMods = new Set([
+            "Adrenal", "Aristocrat's", "Assassin's", "Auto Stim", "Bolstering", "Chameleon", 
+            "Cloaking", "Exterminator's", "Ghoul Slayer's", "Hunter's", "Lucid", 
+            "Mutant Slayer's", "Mutant's", "Nocturnal", "Overeater's", "Regenerating", 
+            "Troubleshooter's", "Vanguard's", "Zealot's",
+            "Agility", "Antiseptic", "Charisma", "Elementalist", "Endurance", "Fireproof", 
+            "Glutton", "Hardy", "HazMat", "Intelligence", "Luck", "Pain Killer", 
+            "Perception", "Poisoner's", "Powered", "Rushing", "Strength", "Warming",
+            "Active", "Arms Keeper's", "Belted", "Burning", "Cavalier's", "Defender's", 
+            "Dissipating", "Doctor's", "Durability", "Electrified", "Frozen", "Healthy", 
+            "Pack Rat's", "Reflex", "Resilient", "Safecracker's", "Sentinel's", 
+            "Steadfast", "Thru-hiker's", "Toxic",
+            "Aegis", "Battle-Loader's", "Bruiser's", "Choo-Choo's", "Hauler's", 
+            "Limit-Breaking", "Miasma's", "Propelling", "Radioactive-Powered", "Raging", 
+            "Ranger's", "Reflective", "Rejuvenator's", "Runner's", "Sawbones", "Scanner's", 
+            "Stalwart's", "Tanky's", "Vector"
+        ]);
+
+        // Ranged Weapon (Purple RW)
+        const rangedWeaponMods = new Set([
+            "Adrenal", "Anti-armor", "Aristocrat's", "Assassin's", "Berserker's", "Bloodied", 
+            "Executioner's", "Exterminator's", "Furious", "Ghoul Slayer's", "Gourmand's", 
+            "Hunter's", "Instigating", "Juggernaut's", "Junkie's", "Lucid", "Medic's", 
+            "Mutant Slayer's", "Mutant's", "Nocturnal", "Quad", "Sniper's", "Stalker's", 
+            "Suppressor's", "Troubleshooter's", "Two Shot", "Vampire's", "Zealot's",
+            "Basher's", "Crippling", "Explosive", "Hitman's", "Inertial", "Last Shot", 
+            "Rapid", "V.A.T.S. Enhanced", "Vital",
+            "Agility (3★)", "Charisma (3★)", "Durability", "Endurance (3★)", "Ghost's", 
+            "Glowing", "Intelligence (3★)", "Lightweight", "Luck (3★)", "Lucky Hit", 
+            "Nimble", "Perception (3★)", "Strength (3★)", "Swift", "V.A.T.S. Optimized",
+            "Bully's", "Conductor's", "Electrician's", "Encircler's", "Fracturer's", 
+            "Pin-Pointer's", "Polished", "Pyromaniac's", "Satiated", "Stabilizer's", 
+            "Tarnished", "Thrill-Seeker's", "Viper's"
+        ]);
+
+        // Melee Weapon (Black MW)
+        const meleeWeaponMods = new Set([
+            "Adrenal", "Anti-armor", "Aristocrat's", "Assassin's", "Berserker's", "Bloodied", 
+            "Executioner's", "Exterminator's", "Feral's", "Furious", "Ghoul Slayer's", 
+            "Gourmand's", "Hunter's", "Instigating", "Juggernaut's", "Junkie's", "Lucid", 
+            "Medic's", "Mutant Slayer's", "Mutant's", "Nocturnal", "Suppressor's", 
+            "Troubleshooter's", "Vampire's", "Zealot's",
+            "Crippling", "Heavy Hitter's", "Inertial", "Pick Pocketer's", "Rapid", 
+            "Riposting", "Steady", "Vital",
+            "Agility (3★)", "Barbarian", "Blocker", "Charisma (3★)", "Defender's", 
+            "Durability", "Endurance (3★)", "Glowing", "Intelligence (3★)", "Lightweight", 
+            "Luck (3★)", "Lucky Hit", "Perception (3★)", "Strength (3★)", "V.A.T.S. Optimized",
+            "Bully's", "Charged", "Combo-Breaker's", "Conductor's", "Encircler's", 
+            "Fencer's", "Fracturer's", "Icemen's", "Polished", "Pounder's", 
+            "Pyromaniac's", "Satiated", "Tarnished", "Thrill-Seeker's", "Viper's"
+        ]);
+
+        const categoryInfo = {
+            'RA': { name: 'Legendary Armor', color: '#f97316', set: regularArmorMods },
+            'PA': { name: 'Legendary Power Armor', color: '#ef4444', set: powerArmorMods },
+            'RW': { name: 'Legendary Ranged Weapon', color: '#c026d3', set: rangedWeaponMods },
+            'MW': { name: 'Legendary Melee Weapon', color: '#334155', set: meleeWeaponMods }
+        };
+
+        const rustyPickCosts = {
+            1: { 'RA': 15, 'PA': 50, 'RW': 25, 'MW': 25 },
+            2: { 'RA': 30, 'PA': 75, 'RW': 50, 'MW': 50 },
+            3: { 'RA': 60, 'PA': 120, 'RW': 100, 'MW': 100 }
+        };
+
+        const modsData = {
+            1: ["Adrenal", "Anti-armor", "Aristocrat's", "Assassin's", "Auto Stim", "Berserker's", "Bloodied", "Bolstering", "Chameleon", "Cloaking","Executioner's", "Exterminator's", "Feral's", "Furious", "Ghoul Slayer's", "Gourmand's", "Heavyweight", "Hunter's", "Instigating", "Juggernaut's","Junkie's", "Life Saving", "Lucid", "Medic's", "Mutant Slayer's", "Mutant's", "Nocturnal", "Overeater's", "Quad", "Regenerating","Sniper's", "Stalker's", "Suppressor's", "Troubleshooter's", "Two Shot", "Unyielding", "Vampire's", "Vanguard's", "Zealot's"],
+            2: ["Agility", "Antiseptic", "Basher's", "Charisma", "Crippling", "Elementalist", "Endurance", "Explosive", "Fierce", "Fireproof","Glutton", "Hardy", "HazMat", "Heavy Hitter's", "Hitman's", "Inertial", "Intelligence", "Last Shot", "Luck", "Pain Killer","Perception", "Pick Pocketer's", "Poisoner's", "Powered", "Rapid", "Riposting", "Rushing", "Steady", "Strength","V.A.T.S. Enhanced", "Vital", "Warming"],
+            3: ["Acrobat's", "Active", "Adamantium", "Agility (3★)", "Arms Keeper's", "Barbarian", "Belted", "Blocker", "Burning", "Cavalier's","Charisma (3★)", "Defender's", "Dissipating", "Diver's", "Doctor's", "Durability", "Electrified", "Endurance (3★)", "Frozen", "Ghost's","Glowing", "Healthy", "Intelligence (3★)", "Lightweight", "Luck (3★)", "Lucky Hit", "Nimble", "Pack Rat's", "Perception (3★)", "Reflex","Resilient", "Safecracker's", "Secret Agent's", "Sentinel's", "Steadfast", "Strength (3★)", "Swift", "Thru-hiker's", "Toxic", "V.A.T.S. Optimized"],
+            4: ["Aegis", "Battle-Loader's", "Bruiser's", "Bully's", "Charged", "Choo-Choo's", "Combo-Breaker's", "Conductor's", "Electrician's", "Encircler's","Fencer's", "Fracturer's", "Hauler's", "Icemen's", "Limit-Breaking", "Miasma's", "Pin-Pointer's", "Polished", "Pounder's", "Propelling","Pyromaniac's", "Radioactive-Powered", "Raging", "Ranger's", "Reflective", "Rejuvenator's", "Runner's", "Satiated", "Sawbones", "Scanner's","Stabilizer's", "Stalwart's", "Tanky's", "Tarnished", "Thrill-Seeker's", "Vector", "Viper's"]
+        };
+
+        const totals = { 1: 39, 2: 32, 3: 40, 4: 37 };
+
+        let learnedSets = { 1: new Set(), 2: new Set(), 3: new Set(), 4: new Set() };
+        let scrapSets = { 1: new Set(), 2: new Set(), 3: new Set(), 4: new Set() };
+        let characters = [];
+        let activeCharacterId = null;
+        let modalMode = 'create';
+        let modalTargetId = null;
+
+        function emptyStarSets() {
+            return { 1: new Set(), 2: new Set(), 3: new Set(), 4: new Set() };
+        }
+
+        function emptyPackedStars() {
+            return { 1: [], 2: [], 3: [], 4: [] };
+        }
+
+        function setsFromArrays(obj) {
+            const out = emptyStarSets();
+            if (!obj) return out;
+            for (let star = 1; star <= 4; star++) {
+                if (obj[star] && Array.isArray(obj[star])) {
+                    out[star] = new Set(obj[star]);
+                }
+            }
+            return out;
+        }
+
+        function packSets(sets) {
+            const o = emptyPackedStars();
+            for (let star = 1; star <= 4; star++) o[star] = Array.from(sets[star] || []);
+            return o;
+        }
+
+        function newCharacterId() {
+            return 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+        }
+
+        function createCharacterRecord(name, learned, scrap) {
+            return {
+                id: newCharacterId(),
+                name: (name || 'Main').trim().slice(0, 32),
+                learned: learned || emptyPackedStars(),
+                scrap: scrap || emptyPackedStars()
+            };
+        }
+
+        function getActiveCharacter() {
+            return characters.find(c => c.id === activeCharacterId) || characters[0] || null;
+        }
+
+        function applyCharacterToMemory(character) {
+            if (!character) {
+                learnedSets = emptyStarSets();
+                scrapSets = emptyStarSets();
+                return;
+            }
+            learnedSets = setsFromArrays(character.learned);
+            scrapSets = setsFromArrays(character.scrap);
+        }
+
+        function writeMemoryToActiveCharacter() {
+            const character = getActiveCharacter();
+            if (!character) return;
+            character.learned = packSets(learnedSets);
+            character.scrap = packSets(scrapSets);
+        }
+
+        function persistStore() {
+            writeMemoryToActiveCharacter();
+            const payload = {
+                version: 3,
+                activeId: activeCharacterId,
+                characters: characters
+            };
+            localStorage.setItem('fo76_craftmods_v3', JSON.stringify(payload));
+
+            const active = getActiveCharacter();
+            if (active) {
+                localStorage.setItem('fo76_craftmods_v2', JSON.stringify({
+                    learned: active.learned,
+                    scrap: active.scrap
+                }));
+                localStorage.setItem('fo76_craftmods_v1', JSON.stringify(active.learned));
+            }
+        }
+
+        function saveState() {
+            persistStore();
+        }
+
+        function loadState() {
+            const savedV3 = localStorage.getItem('fo76_craftmods_v3');
+            if (savedV3) {
+                try {
+                    const parsed = JSON.parse(savedV3);
+                    if (parsed && Array.isArray(parsed.characters) && parsed.characters.length) {
+                        characters = parsed.characters.map(c => ({
+                            id: c.id || newCharacterId(),
+                            name: (c.name || 'Character').slice(0, 32),
+                            learned: c.learned || emptyPackedStars(),
+                            scrap: c.scrap || emptyPackedStars()
+                        }));
+                        activeCharacterId = parsed.activeId && characters.some(c => c.id === parsed.activeId)
+                            ? parsed.activeId
+                            : characters[0].id;
+                        applyCharacterToMemory(getActiveCharacter());
+                        return;
+                    }
+                } catch (e) {}
+            }
+
+            let learned = emptyPackedStars();
+            let scrap = emptyPackedStars();
+            const savedV2 = localStorage.getItem('fo76_craftmods_v2');
+            if (savedV2) {
+                try {
+                    const parsed = JSON.parse(savedV2);
+                    learned = parsed.learned || emptyPackedStars();
+                    scrap = parsed.scrap || emptyPackedStars();
+                } catch (e) {}
+            } else {
+                const savedV1 = localStorage.getItem('fo76_craftmods_v1');
+                if (savedV1) {
+                    try {
+                        const parsed = JSON.parse(savedV1);
+                        learned = parsed;
+                    } catch (e) {}
+                }
+            }
+
+            const main = createCharacterRecord('Main', learned, scrap);
+            characters = [main];
+            activeCharacterId = main.id;
+            applyCharacterToMemory(main);
+            persistStore();
+        }
+
+        function nextDefaultName() {
+            const used = new Set(characters.map(c => c.name.toLowerCase()));
+            if (!used.has('main')) return 'Main';
+            let n = 2;
+            while (used.has('character ' + n)) n++;
+            return 'Character ' + n;
+        }
+
+        function refreshCharacterUI() {
+            const active = getActiveCharacter();
+            const label = document.getElementById('character-label');
+            if (label) label.textContent = active ? active.name : 'Main';
+
+            const menu = document.getElementById('character-menu');
+            if (!menu) return;
+            menu.innerHTML = characters.map(c => {
+                const learnedCount = [1,2,3,4].reduce((sum, star) => sum + ((c.learned && c.learned[star]) ? c.learned[star].length : 0), 0);
+                const isActive = c.id === activeCharacterId;
+                return `
+                    <div class="char-menu-item ${isActive ? 'active' : ''} flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-zinc-800">
+                        <button type="button" data-switch="${c.id}" class="flex-1 text-left min-w-0">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid ${isActive ? 'fa-check text-emerald-400' : 'fa-user text-zinc-500'} text-[10px]"></i>
+                                <span class="truncate text-sm ${isActive ? 'text-emerald-300' : 'text-zinc-200'}">${c.name}</span>
+                            </div>
+                            <div class="text-[10px] text-zinc-500 pl-5">${learnedCount} learned</div>
+                        </button>
+                        <button type="button" data-rename="${c.id}" title="Rename" class="w-7 h-7 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700">
+                            <i class="fa-solid fa-pen text-[10px]"></i>
+                        </button>
+                        <button type="button" data-delete="${c.id}" title="Delete" class="w-7 h-7 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-zinc-700 ${characters.length < 2 ? 'opacity-30 pointer-events-none' : ''}">
+                            <i class="fa-solid fa-trash text-[10px]"></i>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function switchCharacter(id) {
+            if (!id || id === activeCharacterId) return;
+            writeMemoryToActiveCharacter();
+            const next = characters.find(c => c.id === id);
+            if (!next) return;
+            activeCharacterId = id;
+            applyCharacterToMemory(next);
+            persistStore();
+            const search = document.getElementById('search-input');
+            if (search) search.value = '';
+            renderAllColumns();
+            refreshCharacterUI();
+        }
+
+        function addCharacter(name) {
+            writeMemoryToActiveCharacter();
+            const character = createCharacterRecord(name || nextDefaultName());
+            characters.push(character);
+            activeCharacterId = character.id;
+            applyCharacterToMemory(character);
+            persistStore();
+            const search = document.getElementById('search-input');
+            if (search) search.value = '';
+            renderAllColumns();
+            refreshCharacterUI();
+        }
+
+        function renameCharacter(id, name) {
+            const character = characters.find(c => c.id === id);
+            if (!character) return;
+            const cleaned = (name || '').trim().slice(0, 32);
+            if (!cleaned) return;
+            character.name = cleaned;
+            persistStore();
+            refreshCharacterUI();
+        }
+
+        function deleteCharacter(id) {
+            if (characters.length < 2) return;
+            const character = characters.find(c => c.id === id);
+            if (!character) return;
+            if (!confirm(`Delete character "${character.name}" and all of their learned/scrap marks?`)) return;
+            characters = characters.filter(c => c.id !== id);
+            if (activeCharacterId === id) {
+                activeCharacterId = characters[0].id;
+                applyCharacterToMemory(characters[0]);
+                const search = document.getElementById('search-input');
+                if (search) search.value = '';
+                renderAllColumns();
+            }
+            persistStore();
+            refreshCharacterUI();
+        }
+
+        function openCharModal(mode, targetId) {
+            modalMode = mode;
+            modalTargetId = targetId || null;
+            const modal = document.getElementById('char-modal');
+            const title = document.getElementById('char-modal-title');
+            const desc = document.getElementById('char-modal-desc');
+            const input = document.getElementById('char-modal-input');
+            if (mode === 'rename') {
+                const character = characters.find(c => c.id === targetId);
+                title.textContent = 'Rename Character';
+                desc.textContent = 'This only changes the name. Progress stays on this character.';
+                input.value = character ? character.name : '';
+            } else {
+                title.textContent = 'New Character';
+                desc.textContent = 'Starts with a blank tracker. Other characters keep their own progress.';
+                input.value = nextDefaultName();
+            }
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                input.focus();
+                input.select();
+            }, 0);
+        }
+
+        function closeCharModal() {
+            document.getElementById('char-modal').classList.add('hidden');
+            modalTargetId = null;
+        }
+
+        function confirmCharModal() {
+            const name = document.getElementById('char-modal-input').value.trim();
+            if (!name) return;
+            if (modalMode === 'rename') renameCharacter(modalTargetId, name);
+            else addCharacter(name);
+            closeCharModal();
+        }
+
+        function setupCharacterUI() {
+            const btn = document.getElementById('character-btn');
+            const menu = document.getElementById('character-menu');
+            const addBtn = document.getElementById('add-character-btn');
+
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                menu.classList.toggle('hidden');
+            });
+
+            addBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                menu.classList.add('hidden');
+                openCharModal('create');
+            });
+
+            menu.addEventListener('click', function(e) {
+                const switchId = e.target.closest('[data-switch]')?.getAttribute('data-switch');
+                const renameId = e.target.closest('[data-rename]')?.getAttribute('data-rename');
+                const deleteId = e.target.closest('[data-delete]')?.getAttribute('data-delete');
+                if (switchId) {
+                    switchCharacter(switchId);
+                    menu.classList.add('hidden');
+                } else if (renameId) {
+                    menu.classList.add('hidden');
+                    openCharModal('rename', renameId);
+                } else if (deleteId) {
+                    menu.classList.add('hidden');
+                    deleteCharacter(deleteId);
+                }
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!document.getElementById('character-picker').contains(e.target)) {
+                    menu.classList.add('hidden');
+                }
+            });
+
+            document.getElementById('char-modal-cancel').addEventListener('click', closeCharModal);
+            document.getElementById('char-modal-confirm').addEventListener('click', confirmCharModal);
+            document.getElementById('char-modal').addEventListener('click', function(e) {
+                if (e.target === this) closeCharModal();
+            });
+            document.getElementById('char-modal-input').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') confirmCharModal();
+                if (e.key === 'Escape') closeCharModal();
+            });
+
+            refreshCharacterUI();
+        }
+
+        function updateProgressUI(star) {
+            const countEl = document.getElementById(`count-${star}`);
+            const progEl = document.getElementById(`progress-${star}`);
+            const count = learnedSets[star].size;
+            const total = totals[star];
+            countEl.textContent = `${count}/${total}`;
+            const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+            progEl.style.width = `${pct}%`;
+            updateGlobalStats();
+        }
+
+        function updateGlobalStats() {
+            let totalLearned = 0, grandTotal = 0;
+            for (let star = 1; star <= 4; star++) {
+                totalLearned += learnedSets[star].size;
+                grandTotal += totals[star];
+            }
+            const percent = grandTotal > 0 ? Math.round((totalLearned / grandTotal) * 100) : 0;
+            document.getElementById('total-learned').textContent = totalLearned;
+            document.getElementById('total-percent').textContent = percent + '%';
+
+            updateCategoryBreakdown();
+            updateRustyPickRec();
+        }
+
+        // Category stats helper
+        function getCategoryStats() {
+            const categories = [
+                { key: 'W', set: weaponMods, color: '#ec4899', name: 'Weapon' },
+                { key: 'A', set: armorMods, color: '#22d3ee', name: 'Armor' },
+                { key: 'RA', set: regularArmorMods, color: '#f97316', name: 'Reg. Armor' },
+                { key: 'PA', set: powerArmorMods, color: '#ef4444', name: 'Power Armor' },
+                { key: 'RW', set: rangedWeaponMods, color: '#c026d3', name: 'Ranged' },
+                { key: 'MW', set: meleeWeaponMods, color: '#000000', name: 'Melee' }
+            ];
+
+            return categories.map(cat => {
+                let total = cat.set.size;
+                let learned = 0;
+                for (let star = 1; star <= 4; star++) {
+                    for (let mod of learnedSets[star]) {
+                        if (cat.set.has(mod)) learned++;
+                    }
+                }
+                const percent = total > 0 ? Math.round((learned / total) * 100) : 0;
+                return { ...cat, learned, total, percent };
+            });
+        }
+
+        function updateCategoryBreakdown() {
+            const container = document.getElementById('category-breakdown');
+            if (!container) return;
+            
+            const stats = getCategoryStats();
+            let html = '';
+            
+            stats.forEach(stat => {
+                html += `
+                    <div class="flex items-center gap-x-1.5">
+                        <div style="background-color: ${stat.color}; width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0;"></div>
+                        <span class="text-zinc-400">${stat.key}</span>
+                        <span class="text-white">${stat.learned}/${stat.total}</span>
+                        <span class="text-emerald-400">${stat.percent}%</span>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function getRustyPickRecommendation() {
+            let best = null;
+            let minPct = 101;
+            const stars = [1, 2, 3];
+            const catKeys = ['RA', 'PA', 'RW', 'MW'];
+            for (let star of stars) {
+                const modsInStar = modsData[star] || [];
+                const learnedInStar = learnedSets[star];
+                for (let key of catKeys) {
+                    const info = categoryInfo[key];
+                    if (!info) continue;
+                    const catSet = info.set;
+                    let total = 0;
+                    let learnedCount = 0;
+                    for (let mod of modsInStar) {
+                        if (catSet.has(mod)) {
+                            total++;
+                            if (learnedInStar.has(mod)) learnedCount++;
+                        }
+                    }
+                    if (total >= 3) {
+                        const pct = Math.round((learnedCount / total) * 100);
+                        const isBetter = (pct < minPct) || 
+                            (pct === minPct && best && total > best.total);
+                        if (isBetter) {
+                            minPct = pct;
+                            best = {
+                                star: star,
+                                key: key,
+                                name: info.name,
+                                color: info.color,
+                                pct: pct,
+                                learned: learnedCount,
+                                total: total
+                            };
+                        }
+                    }
+                }
+            }
+            return best;
+        }
+
+        function updateRustyPickRec() {
+            const rec = getRustyPickRecommendation();
+            const textEl = document.getElementById('rusty-rec-text');
+            if (!rec || !textEl) {
+                if (textEl) textEl.innerHTML = '<span class="text-zinc-400">No data yet</span>';
+                return;
+            }
+
+            // Gold star icons
+            let starsHTML = '';
+            for (let i = 0; i < rec.star; i++) {
+                starsHTML += `<i class="fa-solid fa-star" style="color: #fcd34d; margin-right: 1px;"></i>`;
+            }
+
+            const cost = rustyPickCosts[rec.star] ? rustyPickCosts[rec.star][rec.key] : 0;
+
+            textEl.innerHTML = `${starsHTML} <span style="color: ${rec.color}; font-weight: 700;">${rec.name}</span> <span class="text-zinc-300">is the rusty pick recommendation</span> <span class="text-amber-400/80 text-sm font-mono ml-2">(${cost} Legendary Scrips Each)</span>`;
+        }
+
+        function applyRowVisuals(row, star, modName) {
+            const isLearned = learnedSets[star].has(modName);
+            const isScrap = scrapSets[star].has(modName);
+
+            row.classList.toggle('learned', isLearned);
+            row.classList.toggle('scrap', isScrap);
+
+            const pill = row.querySelector('.learned-pill');
+            if (pill) pill.classList.toggle('hidden', !isLearned);
+        }
+
+        function createModRow(star, modName) {
+            const isLearned = learnedSets[star].has(modName);
+            const isScrap = scrapSets[star].has(modName);
+
+            const row = document.createElement('div');
+            row.className = 'mod-row flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer';
+            
+            const isWeapon = weaponMods.has(modName);
+            const isArmor = armorMods.has(modName);
+            const isRegularArmor = regularArmorMods.has(modName);
+            const isPowerArmor = powerArmorMods.has(modName);
+            const isRangedWeapon = rangedWeaponMods.has(modName);
+            const isMeleeWeapon = meleeWeaponMods.has(modName);
+
+            let tagsHTML = '';
+            if (isWeapon) tagsHTML += `<div class="w-tag" title="Weapon Mod">W</div>`;
+            if (isArmor) tagsHTML += `<div class="a-tag" title="Armor Mod">A</div>`;
+            if (isRegularArmor) tagsHTML += `<div class="ra-tag" title="Regular Armor">RA</div>`;
+            if (isPowerArmor) tagsHTML += `<div class="pa-tag" title="Power Armor">PA</div>`;
+            if (isRangedWeapon) tagsHTML += `<div class="rw-tag" title="Ranged Weapon">RW</div>`;
+            if (isMeleeWeapon) tagsHTML += `<div class="mw-tag" title="Melee Weapon">MW</div>`;
+
+            row.innerHTML = `
+                <div class="check-cluster">
+                    <input type="checkbox" class="cb-learned w-4 h-4 cursor-pointer" title="Learned" ${isLearned ? 'checked' : ''}>
+                    <input type="checkbox" class="cb-scrap w-4 h-4 cursor-pointer" title="Scrap" ${isScrap ? 'checked' : ''}>
+                </div>
+                <span class="mod-name flex-1 text-[12px] font-medium leading-snug">${modName}</span>
+                <div class="learned-pill px-1.5 py-0 text-[8px] font-bold tracking-wider bg-emerald-600 text-emerald-100 rounded-full hidden select-none">LEARNED</div>
+                ${tagsHTML}
+            `;
+            
+            const learnedBox = row.querySelector('.cb-learned');
+            const scrapBox = row.querySelector('.cb-scrap');
+
+            applyRowVisuals(row, star, modName);
+
+            row.addEventListener('click', function(e) {
+                if (e.target.tagName === 'INPUT') return;
+                learnedBox.checked = !learnedBox.checked;
+                toggleLearned(star, modName, learnedBox.checked, row);
+            });
+            
+            learnedBox.addEventListener('change', function() {
+                toggleLearned(star, modName, learnedBox.checked, row);
+            });
+
+            scrapBox.addEventListener('change', function() {
+                toggleScrap(star, modName, scrapBox.checked, row);
+            });
+            
+            return row;
+        }
+
+        function toggleLearned(star, modName, isChecked, rowElement) {
+            const wasAlreadyLearned = learnedSets[star].has(modName);
+
+            if (isChecked) {
+                learnedSets[star].add(modName);
+                if (!wasAlreadyLearned && typeof confetti === 'function') {
+                    triggerConfetti();
+                }
+            } else {
+                learnedSets[star].delete(modName);
+            }
+
+            applyRowVisuals(rowElement, star, modName);
+            saveState();
+            updateProgressUI(star);
+        }
+
+        function toggleScrap(star, modName, isChecked, rowElement) {
+            if (isChecked) scrapSets[star].add(modName);
+            else scrapSets[star].delete(modName);
+            applyRowVisuals(rowElement, star, modName);
+            saveState();
+        }
+
+        function triggerConfetti() {
+            // Main burst
+            confetti({
+                particleCount: 180,
+                spread: 80,
+                origin: { y: 0.65 }
+            });
+
+            // Second smaller burst for extra pop
+            setTimeout(() => {
+                confetti({
+                    particleCount: 90,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0.1, y: 0.7 }
+                });
+            }, 120);
+
+            setTimeout(() => {
+                confetti({
+                    particleCount: 90,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 0.9, y: 0.7 }
+                });
+            }, 180);
+        }
+
+        function renderColumn(star, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            const mods = modsData[star];
+            const header = document.createElement('div');
+            header.className = 'flex items-center gap-2 px-2.5 pt-1 pb-0.5 text-[8px] font-bold tracking-wider text-zinc-500 select-none';
+            header.innerHTML = `
+                <div class="check-cluster">
+                    <span class="w-4 text-center text-emerald-400" title="Learned">L</span>
+                    <span class="w-4 text-center text-red-400" title="Scrap">S</span>
+                </div>
+                <span class="flex-1">MOD</span>
+            `;
+            container.appendChild(header);
+            mods.forEach(mod => {
+                const row = createModRow(star, mod);
+                container.appendChild(row);
+            });
+            updateProgressUI(star);
+        }
+
+        function renderAllColumns() {
+            renderColumn(1, 'list-1');
+            renderColumn(2, 'list-2');
+            renderColumn(3, 'list-3');
+            renderColumn(4, 'list-4');
+        }
+
+        function setupSearch() {
+            const searchInput = document.getElementById('search-input');
+            searchInput.addEventListener('input', function() {
+                const term = this.value.toLowerCase().trim();
+                document.querySelectorAll('.mod-row').forEach(row => {
+                    const nameEl = row.querySelector('.mod-name');
+                    if (!nameEl) return;
+                    row.style.display = (term === '' || nameEl.textContent.toLowerCase().includes(term)) ? '' : 'none';
+                });
+            });
+            searchInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    this.value = '';
+                    document.querySelectorAll('.mod-row').forEach(row => row.style.display = '');
+                }
+            });
+        }
+
+        function setupResetButton() {
+            document.getElementById('reset-btn').addEventListener('click', function() {
+                const active = getActiveCharacter();
+                const who = active ? active.name : 'this character';
+                if (!confirm(`Reset ALL learned / scrap marks for ${who}? Other characters are not changed.`)) return;
+                for (let star = 1; star <= 4; star++) {
+                    learnedSets[star].clear();
+                    scrapSets[star].clear();
+                }
+                saveState();
+                renderAllColumns();
+                document.getElementById('search-input').value = '';
+                updateCategoryBreakdown();
+            });
+        }
+
+        function initializeApp() {
+            initTailwind();
+            loadState();
+            renderAllColumns();
+            setupSearch();
+            setupResetButton();
+            setupCharacterUI();
+            updateCategoryBreakdown();
+        }
+
+        window.onload = initializeApp;
+    </script>
+</body>
+</html>
