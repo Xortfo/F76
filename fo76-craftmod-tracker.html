@@ -1125,17 +1125,21 @@ async function loadState() {
             });
         }
 
-        function initializeApp() {
-            initTailwind();
-            loadState();
-            renderAllColumns();
-            setupSearch();
-            setupResetButton();
-            setupCharacterUI();
-            updateCategoryBreakdown();
-        }
+        // --- REPLACE initializeApp() ---
+async function initializeApp() {
+    initTailwind();
+    
+    // Wait for data to load from GitHub before rendering
+    await loadState(); 
+    
+    renderAllColumns();
+    setupSearch();
+    setupResetButton();
+    setupCharacterUI();
+    updateCategoryBreakdown();
+}
 
-        window.onload = initializeApp;
+window.onload = initializeApp;
     </script>
 </body>
 </html>
